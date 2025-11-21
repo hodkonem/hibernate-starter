@@ -1,6 +1,9 @@
 package ru.hodkonem;
 
 import org.hibernate.cfg.Configuration;
+import ru.hodkonem.entity.Birthday;
+import ru.hodkonem.converter.BirthdayConverter;
+import ru.hodkonem.entity.Role;
 import ru.hodkonem.entity.User;
 
 import java.sql.SQLException;
@@ -12,6 +15,7 @@ public class HibernateRunner {
 
         var configuration = new Configuration();
         configuration.addAnnotatedClass(User.class);
+        configuration.addAttributeConverter(new BirthdayConverter());
         configuration.configure();
 
         applyEnvVariable(configuration, "hibernate.connection.url", "DB_URL");
@@ -24,11 +28,11 @@ public class HibernateRunner {
             session.beginTransaction();
 
             var user = User.builder()
-                    .username("mikhail@gmail.com")
+                    .username("mikhail1@gmail.com")
                     .firstname("Mikhail")
                     .lastname("Belov")
-                    .birthDate(LocalDate.of(2000, 11, 18))
-                    .age(25)
+                    .birthDate(new Birthday(LocalDate.of(2000, 11, 18)))
+                    .role(Role.ADMIN)
                     .build();
 
             session.persist(user);
