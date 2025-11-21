@@ -7,24 +7,47 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class HibernateRunner {
-    static void main() throws SQLException {
+
+    public static void main(String[] args) throws SQLException {
+
         var configuration = new Configuration();
         configuration.addAnnotatedClass(User.class);
         configuration.configure();
+
+        applyEnvVariable(configuration, "hibernate.connection.url", "DB_URL");
+        applyEnvVariable(configuration, "hibernate.connection.username", "DB_USER");
+        applyEnvVariable(configuration, "hibernate.connection.password", "DB_PASS");
+
         try (var sessionFactory = configuration.buildSessionFactory();
              var session = sessionFactory.openSession()) {
+
             session.beginTransaction();
 
             var user = User.builder()
                     .username("mikhail@gmail.com")
                     .firstname("Mikhail")
                     .lastname("Belov")
-                    .birthDate(LocalDate.of(2000,11,18))
+                    .birthDate(LocalDate.of(2000, 11, 18))
                     .age(25)
                     .build();
 
             session.persist(user);
             session.getTransaction().commit();
         }
+    }
+
+    private static void applyEnvVariable(Configuration configuration,
+                                         String hibernateProperty,
+                                         String envName) {
+
+        String value = System.getenv(envName);
+
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    "Переменная окружения " + envName + " не установлена."
+            );
+        }
+
+        configuration.setProperty(hibernateProperty, value);
     }
 }
