@@ -31,6 +31,12 @@ public class HibernateRunner {
                     .username("mikhail1@gmail.com")
                     .firstname("Mikhail")
                     .lastname("Belov")
+                    .info("""
+                            {
+                            "name": "Mikhail",
+                            "id": 25
+                            }
+                            """)
                     .birthDate(new Birthday(LocalDate.of(2000, 11, 18)))
                     .role(Role.ADMIN)
                     .build();
