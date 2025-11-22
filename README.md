@@ -1,162 +1,358 @@
-Hibernate Starter
+# Hibernate Starter
 
-Учебный сервис, предназначенный для изучения механизмов работы ORM-уровня на базе Hibernate ORM 7.x и взаимодействия с реляционными СУБД. Проект используется для отработки корпоративных подходов к реализации слоя доступа к данным и проверки технических решений в локальном окружении.
+Учебный стенд для изучения Hibernate ORM 7.x, конфигурации ORM-уровня, ведения SQL-логирования, работы с транзакциями и моделирования корпоративного слоя доступа к данным без Spring.  
+Проект применяется для тренировки навыков backend-разработчика и проверки архитектурных решений в локальном окружении.
 
-1. Назначение
+---
+
+## 1. Назначение
 
 Проект предназначен для:
 
-изучения конфигурации и возможностей Hibernate ORM 7.x;
+- изучения конфигурации Hibernate ORM 7.x;
+- отработки объектно-реляционного маппинга (ORM);
+- выполнения CRUD-операций вручную через `Session API`;
+- анализа SQL, генерируемого ORM (включая slow queries);
+- демонстрации natural key вместо surrogate key;
+- исследования транзакций, flush/clear, merge/persist;
+- обучения корпоративным практикам логирования.
 
-отработки принципов маппинга объектов в реляционные структуры;
+Проект используется исключительно в учебных целях.
 
-выполнения базовых операций управления данными (CRUD);
+---
 
-анализа SQL, генерируемого ORM;
+## 2. Системные требования
 
-исследования моделей транзакций и поведения Session API.
+| Компонент        | Требование                  |
+|------------------|-----------------------------|
+| ОС               | Windows / Linux / macOS     |
+| Java             | 25                          |
+| PostgreSQL       | 15+                         |
+| Gradle           | 8.x                         |
+| RAM              | от 512 MB                   |
+| Интернет         | Загрузка зависимостей       |
 
-Сервис не является продуктовой системой и используется исключительно для учебных и исследовательских задач.
+---
 
-2. Системные требования
-   Компонент	Требование
-   ОС	Windows / Linux / macOS
-   Java	25
-   PostgreSQL	15+
-   Gradle	8.x
-   RAM	от 512 МБ
-   Сетевой доступ	Интернет для загрузки зависимостей
-3. Технологический стек
-   Технология	Версия
-   Java	25
-   Hibernate ORM	7.1.8.Final
-   PostgreSQL JDBC	42.7.7
-   Lombok	1.18.42
-   Тестирование	JUnit 5
-   Сборка	Gradle
-4. Структура проекта
-   src
-   ├── main
-   │    ├── java
-   │    │    └── ru/...            # доменные модели, конфигурация ORM
-   │    └── resources
-   │         └── hibernate.cfg.xml
-   └── test
-   └── java                   # модульные тесты
+## 3. Технологический стек
 
+| Технология            | Версия                |
+|-----------------------|------------------------|
+| Java                  | 25                     |
+| Hibernate ORM         | 7.1.8.Final            |
+| PostgreSQL JDBC       | 42.7.7                 |
+| Lombok                | 1.18.42                |
+| Logback               | 1.5.x                  |
+| Logstash Encoder      | 9.0                    |
+| JUnit                 | 5                      |
+| Сборка                | Gradle                 |
 
-Архитектура проекта соответствует внутренним стандартам:
+---
 
-domain — JPA-сущности;
+## 4. Структура проекта
 
-repository / dao — операции доступа к данным;
+```
 
-config — конфигурация ORM и инфраструктуры.
+src
+├── main
+│   ├── java
+│   │    └── ru/hodkonem
+│   │         ├── entity/        # доменные модели
+│   │         ├── converter/     # конвертеры значений
+│   │         └── util/          # HibernateUtil
+│   └── resources
+│        ├── hibernate.cfg.xml
+│        └── logback.xml
+└── test
+└── java                     # модульные тесты
 
-5. Соглашения по разработке и код-стайлу
+````
 
-Используется форматирование IntelliJ IDEA либо Google Java Style Guide.
+Корпоративные соглашения:
 
-Пакеты формируются по шаблону ru.<company>.<module>.
+- `entity` — JPA-сущности;
+- `converter` — Value Objects + AttributeConverter’ы;
+- `util` — инфраструктурные классы;
+- `HibernateRunner` — учебный bootstrap-класс.
 
-Аннотации JPA размещаются над полями.
+---
 
-Сущности должны содержать:
+## 5. Политика логирования
 
-первичный ключ (@Id);
+Логирование используется для:
 
-стратегию генерации ключей (если применимо);
+- анализа SQL, генерируемого Hibernate;
+- поиска медленных запросов;
+- структурированного JSON-логирования;
+- отладки flush → clear → merge сценариев.
 
-публичный конструктор без аргументов.
+### Основные лог-файлы
 
-Для уменьшения шаблонного кода используется Lombok.
+| Файл                 | Содержимое                                    |
+|----------------------|------------------------------------------------|
+| `logs/app.log`       | текстовый лог приложения                       |
+| `logs/app-json.log`  | JSON-лог (совместим с ELK / Loki)              |
+| `logs/sql.log`       | SQL Hibernate + slow queries                   |
 
-Управление транзакциями выполняется через Session API.
+### Настройки Hibernate
 
-6. Политика логирования
-
-Логирование предназначено для анализа SQL.
-
-<property name="hibernate.show_sql">true</property>
+```xml
+<property name="hibernate.show_sql">false</property>
 <property name="hibernate.format_sql">true</property>
 
+<!-- Логирование медленных запросов (>50 мс) -->
+<property name="hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS">50</property>
 
-Рекомендации:
+<property name="hibernate.use_sql_comments">true</property>
+<property name="hibernate.generate_statistics">true</property>
+````
 
-локальная разработка — DEBUG,
+### Уровни логирования
 
-тестовые окружения — INFO,
+* локальная разработка — `DEBUG`, SQL включён;
+* тестовые среды — `INFO`, slow queries включены;
+* прод — SQL включён точечно (по запросу).
 
-продуктивные окружения — SQL-логирование отключено, если нет отдельного согласования.
+---
 
-7. Настройка подключения к БД
+## 6. Пример `logback.xml`
 
-Параметры подключения не хранятся в репозитории и передаются через переменные окружения.
-В hibernate.cfg.xml используются плейсхолдеры:
+```xml
+<configuration>
 
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- Цветная консоль -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Обычный лог -->
+    <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/app-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder><pattern>${LOG_PATTERN}</pattern></encoder>
+    </appender>
+
+    <!-- JSON-лог -->
+    <appender name="APP_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app-json.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/app-json-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder"/>
+    </appender>
+
+    <!-- SQL -->
+    <appender name="SQL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/sql.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/sql-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+    </logger>
+
+    <logger name="org.hibernate.SQL_SLOW" level="INFO" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+        <appender-ref ref="APP_FILE"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="APP_FILE"/>
+        <appender-ref ref="APP_JSON"/>
+    </root>
+
+</configuration>
+```
+
+---
+
+## 7. Natural Key вместо Surrogate Key
+
+Сущность `User` использует **натуральный ключ** (`username`), а не авто-ID:
+
+```java
+@Id
+private String username;
+```
+
+Загрузка сущности:
+
+```
+session.find(User.class, username);
+```
+
+Преимущества:
+
+* бизнес-смысл идентификатора сохраняется;
+* улучшенная читаемость логов и аудита;
+* упрощение тестов и обход автогенерации id.
+
+---
+
+## 8. Настройка подключения к БД
+
+В `hibernate.cfg.xml` используются переменные окружения:
+
+```xml
 <property name="connection.url">${DB_URL}</property>
 <property name="connection.username">${DB_USER}</property>
 <property name="connection.password">${DB_PASS}</property>
-<property name="connection.driver_class">org.postgresql.Driver</property>
+```
 
-Переменные окружения
-Переменная	Значение
-DB_URL	JDBC URL (например: jdbc:postgresql://localhost:5432/postgres)
-DB_USER	имя пользователя БД
-DB_PASS	пароль пользователя БД
-Пример установки переменных окружения
+### Пример установки переменных
 
-Windows (PowerShell):
+PowerShell:
 
+```powershell
 $env:DB_URL="jdbc:postgresql://localhost:5432/postgres"
-$env:DB_USER="appuser"
+$env:DB_USER="postgres"
 $env:DB_PASS="postgres"
+```
 
+Bash:
 
-Linux/macOS (bash):
-
+```bash
 export DB_URL="jdbc:postgresql://localhost:5432/postgres"
-export DB_USER="appuser"
+export DB_USER="postgres"
 export DB_PASS="postgres"
+```
 
-8. Сборка и запуск
-   Сборка:
-   ./gradlew build
+---
 
-Запуск:
+## 9. Сборка и запуск
 
-Через IDE либо выполнением HibernateRunner.
+### Сборка
 
-9. Пример доменной модели
-   @Entity
-   @Table(name = "persons")
-   @Data
-   public class Person {
+```bash
+./gradlew build
+```
 
-   @Id
-   @GeneratedValue(strategy = GenerationType.IDENTITY)
-   private Long id;
+### Запуск
 
-   private String name;
-   }
+Через IDE или запуском класса:
 
-10. План дальнейшего развития
+```
+ru.hodkonem.HibernateRunner
+```
 
-добавление сущностей со связями (OneToMany, ManyToOne, ManyToMany);
+---
 
-введение уровня DAO/Repository;
+## 10. Частые проблемы и их решения
 
-использование HQL и Criteria API;
+### ❗ ClassNotFoundException: org.postgresql.Driver
 
-batch-операции;
+Причина: отсутствует JDBC-драйвер.
+Решение: убедитесь, что в зависимостях есть:
 
-кэш второго уровня;
+```gradle
+runtimeOnly 'org.postgresql:postgresql:42.7.7'
+```
 
-профилирование SQL;
+---
 
-расширение модульных тестов (JUnit 5).
+### ❗ org.hibernate.MappingException: No Dialect mapping for JDBC type
 
-11. Ограничения
+Причина: используется JSONB, но нет `@JdbcTypeCode(SqlTypes.JSON)`.
+Решение: проверьте поле:
 
-Проект предназначен только для локального использования.
-Применение конфигураций и подходов осуществляется в учебных целях.
+```java
+@JdbcTypeCode(SqlTypes.JSON)
+private String info;
+```
+
+---
+
+### ❗ Failed to read hibernate.cfg.xml
+
+Причины:
+
+* файл не в `src/main/resources`;
+* опечатка в имени;
+* неправильная структура XML.
+
+Решение: перепроверьте расположение и корневой тег:
+
+```
+<hibernate-configuration>
+```
+
+---
+
+### ❗ org.hibernate.HibernateException: Environment variable XXX is not set
+
+Причина: отсутствует DB_URL / DB_USER / DB_PASS.
+Решение: экспортируйте переменные (см. раздел выше).
+
+---
+
+## 11. Developer Onboarding
+
+### 1. Установить окружение
+
+* Java 25
+* Gradle 8
+* PostgreSQL 15
+* IntelliJ IDEA (рекомендуется)
+
+### 2. Склонировать репозиторий
+
+```bash
+git clone <URL>
+cd hibernate-starter
+```
+
+### 3. Установить переменные окружения
+
+(см. раздел 8)
+
+### 4. Запустить базовый сценарий Hibernate
+
+Открыть IDE → запустить `HibernateRunner`.
+
+### 5. Проверить логи
+
+После запуска должны создаться:
+
+```
+logs/app.log
+logs/app-json.log
+logs/sql.log
+```
+
+---
+
+## 12. План развития
+
+* сущности со связями (OneToMany, ManyToOne);
+* HQL / JPQL / Criteria API;
+* batch-операции;
+* кэш второго уровня;
+* модульные тесты;
+* профилирование SQL и статистика Hibernate.
+
+---
+
+## 13. Ограничения
+
+* Проект предназначен только для учебных целей.
+* Не используется в продакшене.
+* Конфигурации и подходы представлены для демонстрации ORM-механизмов.
+
+---
