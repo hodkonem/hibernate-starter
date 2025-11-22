@@ -1,18 +1,21 @@
 <configuration>
 
-    <!-- Формат сообщений -->
+    <!-- Общий паттерн для текстовых логов -->
     <property name="LOG_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
 
-    <!-- Основной appender в консоль -->
+    <!-- Цветной вывод в консоль (для разработки) -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- Для корректных цветов под Windows -->
+        <withJansi>true</withJansi>
         <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
+            <!-- %highlight подсвечивает уровень, %cyan/%magenta подсвечивают части сообщения -->
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Ротация логов -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <!-- Обычный файловый лог приложения -->
+    <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>logs/app.log</file>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
@@ -25,9 +28,60 @@
         </encoder>
     </appender>
 
+    <!-- JSON-лог в формате, пригодном для logstash / ELK -->
+    <appender name="APP_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app-json.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/app-json-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder"/>
+    </appender>
+
+    <!-- Отдельный файл для SQL -->
+    <appender name="SQL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/sql.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/sql-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <!-- Короткий паттерн, только время и сообщение (SQL) -->
+            <pattern>%d{HH:mm:ss.SSS} %-5level %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Логгер для обычного SQL -->
+    <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+    </logger>
+
+    <!-- Логгер для slow queries (см. настройку в hibernate.cfg.xml) -->
+    <logger name="org.hibernate.SQL_SLOW" level="INFO" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+        <!-- При желании можно дублировать и в app.log -->
+        <appender-ref ref="APP_FILE"/>
+    </logger>
+
+    <!-- Логгер для bind-параметров (если захочешь позже включить значения параметров) -->
+    <!--
+    <logger name="org.hibernate.orm.jdbc.bind" level="TRACE" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+    </logger>
+    -->
+
+    <!-- Логгер по умолчанию -->
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
-        <appender-ref ref="FILE"/>
+        <appender-ref ref="APP_FILE"/>
+        <appender-ref ref="APP_JSON"/>
     </root>
+
+    <!-- Для разработки можно локально включать DEBUG для своего кода -->
+    <logger name="ru.hodkonem" level="DEBUG"/>
 
 </configuration>
